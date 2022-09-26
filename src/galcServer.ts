@@ -1,5 +1,4 @@
 import * as net from 'net';
-import { dataFromCamera, dataFromGALC } from './main';
 import { WebSocketServer } from 'ws';
 
 var events = require('events');
