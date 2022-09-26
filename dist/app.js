@@ -21,11 +21,12 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const net = __importStar(require("net"));
 const server = net.createServer((socket) => {
-    console.log('Connection from', socket.remoteAddress.slice(7), 'port', socket.remotePort);
+    console.log('Connection from', socket.remoteAddress.slice(7), 'port', socket.remotePort.toString());
     socket.on('data', (buffer) => {
         // console.log('Request from', buffer.toString() , 'port', socket.remotePort);
         let tmp = buffer.toString();
         let ackg = tmp.slice(6, 12) + tmp.slice(0, 6) + tmp.slice(12, 16) + tmp[16] + tmp.slice(17, 22) + tmp.slice(22, 24) + tmp.slice(24) + '00';
+        console.log("sent :", ackg);
         socket.write(ackg);
     });
     socket.on('end', () => {
