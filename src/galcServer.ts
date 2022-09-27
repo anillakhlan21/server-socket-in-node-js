@@ -7,8 +7,8 @@ var eventEmitter = new events.EventEmitter();
 
 
 //global variable to store galc and camera serial number
-let galcSerialNumber = '';
-let cameraSerialNumber = '';
+let galcSerialNumber = '#';
+let cameraSerialNumber = '#';
 
 
 // --------------------Websocket-------------------------------------------------------------------
@@ -25,11 +25,8 @@ wss.on('connection', (ws) => {
   })
 })
 
-function sendDataToWSS(data: string) {
-  console.log(data);
+  // eventEmitter.emit('send', data);
 
-  eventEmitter.emit('send', data);
-}
 
 // ----------------------------GALC server---------------------------------------
 
@@ -43,9 +40,18 @@ const galcServer = net.createServer((socket) => {
 
   socket.on('data', (buffer: Buffer) => {
     galcSerialNumber = buffer.toString();
-    sendDataToWSS("G@"+galcSerialNumber);
     console.log("GALC serial number: ", galcSerialNumber);
+    eventEmitter.emit("send","G@"+galcSerialNumber);
+
+    //acknowledgement data sending
     socket.write(galcSerialNumber);
+
+    //compare and send color signal to websocket if both serial number is not '#'
+    if(cameraSerialNumber !='#'){
+      compareAndSend(galcSerialNumber,cameraSerialNumber);
+      galcSerialNumber='#';
+      cameraSerialNumber='#';
+    }
   });
 
   socket.on('end', () => {
@@ -62,14 +68,20 @@ galcServer.listen(51454);
 
 // ---------------------------camera client-----------------------------------------------------
 
-const camClient = net.connect({ port: 9876, host: '127.0.0.1', timeout: 10000 }, () => {
+const camClient = net.connect({ port: 9876, host: '127.0.0.1'}, () => {
   console.log('connected to server!');
 });
 
 camClient.on('data', (data) => {
-  console.log("cameraData", data.toString());
-  sendDataToWSS("C@" + data);
-  compareAndSend(galcSerialNumber, data.toString());
+  cameraSerialNumber = data.toString();
+  console.log("cameraData", cameraSerialNumber);
+  eventEmitter.emit("send","C@" + data);
+
+  if(galcSerialNumber != '#'){
+    compareAndSend(galcSerialNumber, cameraSerialNumber);
+    galcSerialNumber = '#';
+    cameraSerialNumber = '#';
+  }
   console.log("after compareData");
 
   camClient.end();
@@ -89,19 +101,19 @@ function compareAndSend(galcSerialNumber, cameraSerialNumber) {
 
   if (galcSerialNumber === cameraSerialNumber) {
     // console.log("main: serial number matched");
-    sendDataToWSS('M');
+    eventEmitter.emit('send','M');
 
-  } else if (galcSerialNumber === '' && cameraSerialNumber === '') {
-    sendDataToWSS('GC');
+  } else if (galcSerialNumber === ' ' && cameraSerialNumber === ' ') {
+    eventEmitter.emit('send','GC');
 
-  } else if (galcSerialNumber === '') {
-    sendDataToWSS('G');
+  } else if (galcSerialNumber === ' ') {
+    eventEmitter.emit('send','G');
 
   } else if (cameraSerialNumber === '') {
-    sendDataToWSS('C');
+    eventEmitter.emit('send','C');
 
   } else if (galcSerialNumber != cameraSerialNumber) {
-    sendDataToWSS('N');
+    eventEmitter.emit('send','N');
   }
 }
 
